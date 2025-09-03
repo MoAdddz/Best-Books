@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ user.username }}'s Profile</title>
+</head>
+<body>
+    <h1>{{ user.username }}'s Profile</h1>
+    <p>Average Rating: {{ average_rating }}</p>
+    <p>Number of Trades: {{ num_trades }}</p>
+    <h2>Books Owned</h2>
+    <ul>
+        {% for book in books %}
+            <li>{{ book.book_name }} ({{ book.genre }})</li>
+        {% empty %}
+            <li>No books owned.</li>
+        {% endfor %}
+    </ul>
+    <h2>Wishlist</h2>
+    <ul>
+        {% for book in wishlist_books %}
+            <li>{{ book.book_name }} ({{ book.genre }})</li>
+        {% empty %}
+            <li>No books in wishlist.</li>
+        {% endfor %}
+    </ul>
+    <h2>Reviews Received</h2>
+    <ul>
+        {% for review in my_reviews %}
+            <li>Rating: {{ review.rating }} - {{ review.comment }}</li>
+        {% empty %}
+            <li>No reviews yet.</li>
+        {% endfor %}
+    </ul>
+
+    {% if request.user.id == user.id %} <!-- This makes sure that users can only upload their books on their own profile -->
+        <a href="{% url 'upload_book' %}">Upload a new book</a>
+    {% endif %}
+</body>
+</html>

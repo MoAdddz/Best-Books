@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Upload a Book</h1>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div>
+            <label for="book_name">Book Name:</label>
+            <input type="text" id="book_name" name="book_name" required>
+        </div>
+        <div>
+            <label for="author">Author:</label>
+            <input type="text" id="author" name="author" required>
+        </div>
+        <div>
+            <label for="genre">Genre:</label>
+            <select id="genre" name="genre" required>
+                <option value="Fiction">Fiction</option>
+                <option value="Non-Fiction">Non-Fiction</option>
+                <option value="Science Fiction">Science Fiction</option>
+                <option value="Fantasy">Fantasy</option>
+                <option value="Mystery">Mystery</option>
+                <option value="Biography">Biography</option>
+                <option value="History">History</option>
+                <option value="Romance">Romance</option>
+            </select>
+        </div>
+        <div>
+            <label for="image">Book Cover Image:</label>
+            <input type="file" id="image" name="image" accept="image/*">
+        </div>
+        <div>
+            <label for="condition">Condition:</label>
+            <select id="condition" name="condition" required>
+                <option value="New">New</option>
+                <option value="Used Like New">Like New</option>
+                <option value="Good">Good</option>
+                <option value="Acceptable">Acceptable</option>
+                <option value="Poor">Poor</option>
+            </select>
+        </div>
+        <div>
+            <label for="is_wishlist">Is this book for your Wishlist?</label>
+            <select id="is_wishlist" name="is_wishlist">
+                <option value="True">Yes</option>
+                <option value="False">No</option>
+            </select>
+        </div>
+        <div>   
+            <label for="description">Description:</label>
+            <p>Provide a brief description of the book (min 25 words):</p>
+            <textarea id="description" name="description" rows="3" cols="50"></textarea>
+        </div>
+        <p></p>
+        <div>
+        <button type="submit">Upload Book</button>
+        </div>
+    </form>
+
+    <p></p>
+    <a href="{% url 'profile' request.user.id %}">Back to Profile</a>
+</body>
+</html>

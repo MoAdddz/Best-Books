@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+</head>
+<body>
+    <h1>Sign Up Page</h1>
+    <form method="post" action="{% url 'signup' %}">
+        {% csrf_token %}
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required placeholder="Enter a unique username">
+        <br>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required placeholder="Enter your unique email">
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required placeholder="Enter your password">
+        <br>
+        <label for="confirm_password">Confirm Password:</label>
+        <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm your password">
+        <br>
+        <div>
+            <ul id="password-requirements">
+                <li id="length">Password must be at least 8 characters long.</li>
+                <li id="uppercase">Password must contain at least one uppercase letter.</li>
+                <li id="lowercase">Password must contain at least one lowercase letter.</li>
+                <li id="number">Password must contain at least one number.</li>
+                <li id="special">Password must contain at least one special character (e.g. @).</li>
+                <li id="match">Passwords must match.</li>
+            </ul>
+        </div>
+        <button type="submit">Sign Up</button>
+        <p></p>
+        <a href="{% url 'login' %}">Already have an account? Login here.</a>
+    </form>
+<script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>

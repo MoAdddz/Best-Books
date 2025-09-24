@@ -1,19 +1,22 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
 </head>
 <body>
+    <a href="{% url 'settings' %}" id="go_home_id">Settings</a>
     <h1>Welcome to Best Books</h1>
     <p>Explore our collection of the best books available.</p>
     <nav>
         <ul>
             <li><a href="{% url 'books' %}">Books</a></li>
             <li><a href="{% url 'profile' request.user.id %}">My Profile</a></li>
-            <li><a href="{% url 'login' %}">Login</a></li>
-            <li><a href="{% url 'signup' %}">Sign Up</a></li>
+            <li><a href="{% url 'settings' %}">Settings</a></li>
+            <li><a href="{% url 'mytrades' %}">My Trades</a></li>
         </ul>
 </body>
 </html>

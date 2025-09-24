@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from .models import User, Book, Trade, BooksInTrade, Message, Report, Rating
 from .forms import MyUserRegistrationForm, MyLoginForm
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, logout
 from django.shortcuts import redirect
 
 def signup_view(request):
@@ -39,66 +39,63 @@ def login_view(request):
     return render(request, 'login.html')  # Render a login form template 
 
 def home_view(request):
-    if request.user.is_authenticated != True:
+    if not request.user.is_authenticated:
         # If the user is not authenticated, redirect to the login page
         return redirect('login')
-    return render(request, 'home.html')  # Render a home page template
+    return render(request, 'core/home.html')  # Render a home page template
 
 
 def books_view(request):
-    # Get all the books from the database
-    books = Book.objects.all()
-    
-    # Get the genre the user picked from the filter (like "Fiction" or "Fantasy")
-    genre = request.GET.get('genre')
-    
-    # Get what the user typed in the search box
-    search = request.GET.get('search')
+    # Get all genres
+    # .values_list returns a list of tuples, flat=True makes it into a flat list instqead of list of lists of tuples, .distinct() removes duplicates
+    genres = Book.objects.values_list('genre', flat=True).distinct()
+    #request: is The current HTTP request object, which contains all data sent by the client (browser).
+    #GET: A dictionary-like object on the request that contains all the URL query parameters (e.g., for /books/?genre=Fiction, GET contains {'genre': 'Fiction'})
+    #.get('genre', 'All'):Looks for the key 'genre' in the GET parameters. If 'genre' is present (e.g., /books/?genre=Fiction), it returns its value (e.g., 'Fiction'). If 'genre' is not present in the URL, it returns the default value 'All'.
+    selected_genre = request.GET.get('genre', 'All')
+    search = request.GET.get('search', '')
 
-    # If the user picked a genre and it's not "All", only show books from that genre
-    if genre and genre != 'All':
-        books = books.filter(genre=genre)
-    
-    # If the user typed something in the search box, only show books with that word in the name
+    # 
+    books = Book.objects.exclude(owner_id=request.user.id)
+    if selected_genre != 'All':
+        books = books.filter(genre=selected_genre)
     if search:
         books = books.filter(book_name__icontains=search)
 
-    # Make a list of all the genres so we can show them in the drop-down menu
-    genres = [g[0] for g in Book.GENRE_CHOICES]
-    
-    # Show the page with the books, genres, and what the user picked/typed
-    return render(request, 'books.html', {
+    return render(request, 'core/books.html', {
         'books': books,
         'genres': genres,
-        'selected_genre': genre or 'All',
-        'search': search or '',
+        'selected_genre': selected_genre,
+        'search': search,
     })
 
-def profile_view(request, id):
-
-        if not request.user.is_authenticated:
-            return redirect('login')  # Redirect to login if not authenticated
+def profile_view(request, user_id):
+    if not request.user.is_authenticated:
+        return redirect('login')  # Redirect to login if not authenticated
+    
+    if request.method == 'GET':
         
-        user = User.objects.get(id=id)  # Get the user by ID from the URL
-        books = Book.objects.filter(is_wishlist=False, owner = id)  # Get all books owned by the user
-        wishlist_books = Book.objects.filter(is_wishlist=True)  # Get all wishlist books owned by the user
-        my_reviews = Rating.objects.filter(rated=user)  # Get all reviews made to the user
+        user = User.objects.get(id=user_id)  # Get the user's record using their ID 
+        books = Book.objects.filter(is_wishlist=False, owner = user_id)  # Get all books owned by the user
+        wishlist_books = Book.objects.filter(is_wishlist=True, owner = user_id)  # Get all wishlist books owned by the user
+        my_reviews = Rating.objects.filter(rated_id=user_id)  # Get all reviews made to the user
         total_rating =0
         for i in range(len(my_reviews)):
             total_rating = total_rating + my_reviews[i].rating
         average_rating = total_rating / len(my_reviews) if my_reviews else 0  # Calculate average rating
-        num_trades = Trade.objects.filter(requester=user).count() + Trade.objects.filter(responder=user).count()  
-        # Count trades involving the user
+        num_trades_completed = Trade.objects.filter(requester=user_id, responder_received=True, requester_received=True).count() + Trade.objects.filter(responder=user_id, responder_received=True, requester_received=True).count()  
         
-        return render(request, 'profile.html', {
+        return render(request, 'core/profile.html', {
             'user': user,
             'books': books,
             'wishlist_books': wishlist_books,
             'my_reviews': my_reviews,
-            'average_rating': average_rating,
-            'num_trades': num_trades,
-            id: id,
+            'average_rating': average_rating if my_reviews else 'No ratings yet',
+            'num_trades_completed': num_trades_completed,
         })
+        
+    return HttpResponse(f"Profile page for user ID: {user_id}")
+
 
 def upload_book_view(request):
     if not request.user.is_authenticated:
@@ -132,3 +129,33 @@ def upload_book_view(request):
         return redirect('books')  # Redirect to the books page after uploading
     
     return render(request, 'upload_book.html')  # Render the upload book form template
+
+def settings_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')  # Redirect to login if not authenticated
+    
+    if request.method == 'POST':
+        # Here you would handle the form submission to update user settings
+        # For example, updating email, password, etc.
+        pass
+    
+    return render(request, 'core/settings.html')  # Render the settings page template
+
+def signout_view(request):
+    logout(request)
+    return redirect('login')
+
+def mytrades_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')  # Redirect to login if not authenticated
+    
+    user = request.user
+    trades = Trade.objects.filter(requester=user) | Trade.objects.filter(responder=user)
+    trades = trades.order_by('-created_at')  # Order by most recent trades first
+
+    return render(request, 'core/mytrades.html', {
+        'trades': trades,
+    })
+
+def trade_view(request, trade_id):
+    HttpResponse(f"Details for trade ID: {trade_id}")

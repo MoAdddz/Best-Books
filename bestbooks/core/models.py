@@ -61,7 +61,6 @@ class Trade(models.Model):
     def __str__(self):
         return f"Trade between {self.requester.username} and {self.responder.username} on {self.created_at} and both paid at {self.time_both_paid}"
     
-
 class BooksInTrade(models.Model):
     trade = models.ForeignKey(Trade, on_delete=models.CASCADE)
     book = models.ForeignKey(Book, on_delete=models.CASCADE)

@@ -3,7 +3,7 @@ body {
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
-    background-color: #f5f5f5;
+    background-color: #b1abab;
     color: #111;
 }
 
@@ -126,4 +126,16 @@ a:hover {
     .book-card {
         width: 90%;
     }
+}
+
+#go_home_id {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 4px;
+    text-decoration: none;
+    z-index: 1000;
 }

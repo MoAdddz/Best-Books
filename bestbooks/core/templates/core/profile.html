@@ -1,21 +1,35 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <meta charset="UTF-8">
     <title>{{ user.username }}'s Profile</title>
 </head>
 <body>
+    <a href="{% url 'home' %}" id="go_home_id">Home</a>
     <h1>{{ user.username }}'s Profile</h1>
     <p>Average Rating: {{ average_rating }}</p>
-    <p>Number of Trades: {{ num_trades }}</p>
+    <p>Number of Trades: {{ num_trades_completed }}</p>
     <h2>Books Owned</h2>
-    <ul>
+    <div class="book-list">
         {% for book in books %}
-            <li>{{ book.book_name }} ({{ book.genre }})</li>
+            <div class="book-card">
+                {% if book.image %}
+                    <img src="{{ book.image.url }}" alt="{{ book.book_name }}">
+                {% else %}
+                    <img src="{% static 'img/default_book.jpg' %}" alt="No image">
+                {% endif %}
+                <h3>{{ book.book_name }}</h3>
+                <p><strong>Author:</strong> {{ book.author }}</p>
+                <p><strong>Genre:</strong> {{ book.genre }}</p> <!-- transitive dependancy right below -->
+                <p><strong>Owner:</strong> <a href="{% url 'profile' book.owner_id %}">{{ book.owner.username }}</a></p>
+                <p><strong>Condition:</strong> {{ book.condition }}</p>
+            </div>
         {% empty %}
-            <li>No books owned.</li>
+            <p style="color:#fff;">No books found.</p>
         {% endfor %}
-    </ul>
+    </div>
     <h2>Wishlist</h2>
     <ul>
         {% for book in wishlist_books %}

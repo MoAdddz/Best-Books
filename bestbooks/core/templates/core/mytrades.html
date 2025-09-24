@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <a href="{% url 'home' %}" id="go_home_id">Home</a>
+    <h1>My Trades</h1>
+    <h2>Completed trades</h2>
+    <ul>
+        {% for trade in trades %}
+            {% if trade.requester_recieved and trade.responder_recieved %}
+                <li>
+                    Trade ID: {{ trade.id }} - 
+                    Book: {{ trade.book.title }} - 
+                    From: {{ trade.from_user.username }} - 
+                    To: {{ trade.to_user.username }} - 
+                    Status: {{ trade.status }} - 
+                    <a href="{% url 'trade' trade.id %}">View Details</a>
+                </li>
+            {% endif %}
+        {% empty %}
+            <li>No trades found.</li>
+        {% endfor %}
+    </ul>
+    <h2>Ongoing trades</h2>
+    <ul>
+        {% for trade in trades %}
+            {% if not trade.requester_recieved and not trade.responder_recieved %}
+                <li>
+                    Trade ID: {{ trade.id }} - 
+                    Book: {{ trade.book.title }} - 
+                    From: {{ trade.from_user.username }} - 
+                    To: {{ trade.to_user.username }} - 
+                    Status: {{ trade.status }} - 
+                    <a href="{% url 'trade' trade.id %}">View Details</a>
+                </li>
+            {% endif %}
+        {% empty %}
+            <li>No trades found.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

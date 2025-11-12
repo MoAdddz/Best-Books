@@ -1,0 +1,43 @@
+function signup():
+	do:
+		username = input("Enter a unique username")
+		email = input("Enter your unique email")
+		print("Password must be at least 8 characters long.")
+		print("Password must have 1 uppercase letter and 1 lowercase letter")
+		print("Password must have 1 number and 1 special character")
+		password = input("Enter a password")
+		confirm_password = input("Confirm password")
+	until:
+        username.is_unique() AND email.is_unique() AND password == confirm_password:
+	
+	user_database.store( username,email,password.hash() )
+
+	return redirect login
+
+function login():
+    do:
+        email = input("Enter your unique email")
+        password = input("Enter your password")
+    until:
+        user_database.contains( email, password.hash() )
+    
+    user.authenticated()
+    return redirect home
+
+Homepage Book Display Algorithm
+-------------------------------  
+def display_books(search_query, genre):
+    import book_database
+    display_list = []
+
+    for book in book_database:  
+        if book.is_for_trade == TRUE AND book.owner.trading = TRUE AND book.owner.id != user.id:
+                display_list.add(title, author, genre, condition, image, owner_username)
+
+    if search_query is present OR genre is present :
+        for book in display_list:
+            if book.dont_contain( search_query ) OR book.genre != genre:
+                display_list.remove(book)
+
+    CONTINUE displaying updated display_list until user clears filters or exits homepage.  
+

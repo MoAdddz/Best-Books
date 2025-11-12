@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import User  # Make sure this import is correct for your project
+from .models import User,Book  # Make sure this import is correct for your project
 
 # This is a form that helps people sign up for your website.
 # It collects information like username, email, and password.
@@ -65,3 +65,9 @@ class MyLoginForm(forms.Form):
             raise ValidationError("Both fields are required.")
         
         return cleaned_data
+    
+class BookUploadForm(forms.ModelForm):
+
+    class Meta:
+        model = Book
+        fields = ['book_name', 'author', 'genre', 'description', 'image', 'condition', 'is_wishlist']

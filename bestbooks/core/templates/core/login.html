@@ -18,8 +18,12 @@
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required placeholder="Enter your password">
         <br>
+            {% if error %}
+        <div class="error">{{ error }}</div>
+            {% endif %}
         <button type="submit">Login</button>
     </form>
+    
     <a href="{% url 'reset_password' %}">Forgot your password? Reset it here.</a>
     <br>
     <a href="{% url 'signup' %}">Don't have an account? Signup here.</a>

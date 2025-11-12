@@ -2,9 +2,47 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from .models import User, Book, Trade, BooksInTrade, Message, Report, Rating
-from .forms import MyUserRegistrationForm, MyLoginForm
+from .forms import MyUserRegistrationForm, MyLoginForm, BookUploadForm
 from django.contrib.auth import login, authenticate, logout
 from django.shortcuts import redirect
+from django.shortcuts import render, redirect, get_object_or_404
+
+# ...existing code...
+
+def profile_view(request, user_id):
+    """
+    Show a user's profile and that user's books.
+    If the logged-in user is viewing their own profile, show upload link.
+    """
+    if request.method == 'GET':
+        profile_user = get_object_or_404(User, id=user_id)
+        books = Book.objects.filter(owner=profile_user).order_by('-id')
+        is_owner = request.user.is_authenticated and request.user == profile_user
+        return render(request, 'core/profile.html', {
+            'profile_user': profile_user,
+            'books': books,
+            'is_owner': is_owner,
+        })
+
+@login_required(login_url='login')
+def upload_book_view(request):
+    """
+    Upload a book. Owner is set to request.user.
+    After successful upload redirect back to the uploader's profile.
+    """
+    if request.method == 'POST':
+        form = BookUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            book = form.save(commit=False)
+            book.owner = request.user
+            book.save()
+            return redirect('profile', user_id=request.user.id)
+    else:
+        form = BookUploadForm()
+    return render(request, 'core/upload_book.html', {'form': form})
+
+def layout_view(request):
+    return render(request, 'core/layout.html')  # Render a layout template
 
 def signup_view(request):
     if request.method == 'POST':
@@ -15,7 +53,7 @@ def signup_view(request):
             return redirect('home')  # Redirect to home after signup
     else:
         form = MyUserRegistrationForm()  # Create an empty form for GET requests
-    return render(request, 'core\signup.html', {'form': form})  # Render the signup form template
+    return render(request, 'core/signup.html', {'form': form})  # Render the signup form template
 
 def reset_password_view(request):
     # This function will handle password reset logic
@@ -30,7 +68,9 @@ def login_view(request):
             login(request, user) # logs the user in
             return redirect('home')  # Redirect to a home page 
         else:
-            return HttpResponse("Invalid credentials")
+            # If authentication fails, re-render the login page with an error message
+            form = MyLoginForm()
+            return render(request, 'core/login.html', {'form': form, 'error': 'Invalid username or password.'})
     else:
         # If the request is GET, render the login form
         form = MyLoginForm()
@@ -43,7 +83,6 @@ def home_view(request):
         # If the user is not authenticated, redirect to the login page
         return redirect('login')
     return render(request, 'core/home.html')  # Render a home page template
-
 
 def books_view(request):
     # Get all genres
@@ -97,7 +136,7 @@ def profile_view(request, user_id):
     return HttpResponse(f"Profile page for user ID: {user_id}")
 
 
-def upload_book_view(request):
+#def upload_book_view(request):
     if not request.user.is_authenticated:
         return redirect('login')  # Redirect to login if not authenticated
     
@@ -158,4 +197,18 @@ def mytrades_view(request):
     })
 
 def trade_view(request, trade_id):
-    HttpResponse(f"Details for trade ID: {trade_id}")
+    if not request.user.is_authenticated:
+        return redirect('login')  # Redirect to login if not authenticated
+    trade = Trade.objects.get(id=trade_id)
+    user = request.user
+    other_user = trade.responder if trade.requester == user else trade.requester
+    books_in_trade = BooksInTrade.objects.filter(trade=trade).select_related('book')
+
+    
+    return render(request, 'core/trade.html', {
+        'user': user,
+        'other_user': other_user,
+        'trade': trade,
+        'books_in_trade': books_in_trade,
+
+    })

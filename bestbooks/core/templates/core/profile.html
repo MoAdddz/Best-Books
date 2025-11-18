@@ -1,22 +1,61 @@
+{% extends 'core/layout.html' %}
 {% load static %}
-<!doctype html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>{{ profile_user.username|default:"User" }}'s Profile</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-</head>
-<body>
-    <header>
-        <a href="{% url 'home' %}" id="go_home_id">Home</a>
-        {% if is_owner %}
-            <a href="{% url 'upload_book' %}" class="btn" style="float:right; margin:12px;">Upload a book</a>
-        {% endif %}
-    </header>
+{% block title %}Settings{% endblock %}
 
-        <h1>{{ profile_user.username|default:"User" }}'s Profile</h1>
+{% block content %}
+    {% if is_owner %}
+        <a href="{% url 'upload_book' %}">Upload a book</a>
+    {% endif %}
+    {% if not is_owner %}
+        <form action="{% url 'start_trade' user_id=profile_user.id %}" method="post" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">Start Trade</button>
+        </form>
+    {% endif %}
+    <h1>{{ profile_user.username }}'s Profile</h1>
+    <p><strong>Date Joined:</strong> {{ date_joined }}</p>
+    <p><strong>Last Login:</strong> {{ last_login }}</p>
+    <p><strong>Number of Trades Completed:</strong> {{ num_trades_completed }}</p>
+    <p><strong>Average Rating:</strong> {{ average_rating }}</p>
+    
+    
+    <h2>Books Owned</h2>
+    <div class="book-list">
+        {% for book in owned_books %}
+            <div class="book-card">
+                {% if book.image %}
+                    <img src="{{ book.image.url }}" alt="{{ book.book_name }}">
+                {% else %}
+                    <img src="{% static 'img/default_book.jpg' %}" alt="No image">
+                {% endif %}
+                <h3>{{ book.book_name }}</h3>
+                <p><strong>Author:</strong> {{ book.author }}</p>
+                <p><strong>Genre:</strong> {{ book.genre }}</p> <!-- transitive dependancy right below -->
+                <p><strong>Owner:</strong> <a href="{% url 'profile' book.owner_id %}">{{ book.owner.username }}</a></p>
+                <p><strong>Condition:</strong> {{ book.condition }}</p>
+            </div>
+        {% empty %}
+            <p style="color:#fff;">No books found.</p>
+        {% endfor %}
+    </div>
 
-        <h2>Books ({{ books.count }})</h2>
-        
-</body>
-</html>
+    <h2>Books Wished</h2>
+    <div class="book-list">
+        {% for book in wished_books %}
+            <div class="book-card">
+                {% if book.image %}
+                    <img src="{{ book.image.url }}" alt="{{ book.book_name }}">
+                {% else %}
+                    <img src="{% static 'img/default_book.jpg' %}" alt="No image">
+                {% endif %}
+                <h3>{{ book.book_name }}</h3>
+                <p><strong>Author:</strong> {{ book.author }}</p>
+                <p><strong>Genre:</strong> {{ book.genre }}</p> <!-- transitive dependancy right below -->
+                <p><strong>Owner:</strong> <a href="{% url 'profile' book.owner_id %}">{{ book.owner.username }}</a></p>
+                <p><strong>Condition:</strong> {{ book.condition }}</p>
+            </div>
+        {% empty %}
+            <p style="color:#fff;">No books found.</p>
+        {% endfor %}
+    </div>
+{% endblock %}

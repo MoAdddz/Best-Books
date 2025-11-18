@@ -1,6 +1,7 @@
 from django import forms
+from django.db import models
 from django.core.exceptions import ValidationError
-from .models import User,Book  # Make sure this import is correct for your project
+from .models import User, Book, Trade, BooksInTrade, Message, Report, Rating
 
 # This is a form that helps people sign up for your website.
 # It collects information like username, email, and password.
@@ -66,8 +67,19 @@ class MyLoginForm(forms.Form):
         
         return cleaned_data
     
-class BookUploadForm(forms.ModelForm):
 
     class Meta:
         model = Book
         fields = ['book_name', 'author', 'genre', 'description', 'image', 'condition', 'is_wishlist']
+
+class BookUploadForm(forms.ModelForm):
+    description = forms.CharField(required=False, min_length=50, widget=forms.Textarea)
+    class Meta:
+        model = Book
+        fields = ['book_name','author','genre','description','image','condition','is_wishlist']
+
+class startTradeForm(forms.Form):
+
+    class Meta:
+        model = Trade
+        fields = ['requester','responder']

@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, MinLengthValidator
 
 class User(AbstractUser):
     address = models.TextField(blank=True)
@@ -32,7 +32,11 @@ class Book(models.Model):
     book_name = models.CharField(max_length=255)
     author = models.CharField(max_length=100)
     genre = models.CharField(max_length=50, choices=GENRE_CHOICES)  # drop-down with same value/label
-    description = models.TextField(max_length=1000, blank=True, null=True) # Allows for optional description
+    description = models.TextField(
+        max_length=1000,
+        blank=True,
+        null=True,
+    )
     image = models.ImageField(upload_to='book_images/', blank=True, null=True)
     condition = models.CharField(max_length=50, choices=CONDITION_CHOICES)
     is_wishlist = models.BooleanField(default=False)
@@ -42,16 +46,23 @@ class Book(models.Model):
         return self.book_name
     
 class Trade(models.Model):
+    Trade_Status_Choices = [
+        ('Pending', 'Pending'),
+        ('Accepted', 'Accepted'),
+        ('Paid', 'Paid'),
+        ('Shipped', 'Shipped'),
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'),
+    ]
+    
     requester = models.ForeignKey(User, related_name='requested_trades', on_delete=models.CASCADE) #Cascade delete means if the user is deleted, their trades are also deleted
     responder = models.ForeignKey(User, related_name='received_trades', on_delete=models.CASCADE)
+    requester_status = models.CharField(max_length=20, choices=Trade_Status_Choices, default='Pending')
+    responder_status = models.CharField(max_length=20, choices=Trade_Status_Choices, default='Pending')
+
     created_at = models.DateTimeField(auto_now_add=True)
-    requester_accepted = models.BooleanField(default=False)
-    responder_accepted = models.BooleanField(default=False)
-    requester_paid = models.BooleanField(default=False)
-    responder_paid = models.BooleanField(default=False)
+
     time_both_paid = models.DateTimeField(default=None, null=True, blank=True)
-    requester_received = models.BooleanField(default=False)
-    responder_received = models.BooleanField(default=False)
 
     def check_and_set_both_paid(self):
         if self.requester_paid and self.responder_paid and self.time_both_paid is None:

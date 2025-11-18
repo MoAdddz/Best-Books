@@ -1,8 +1,8 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from .models import User, Book, Trade, BooksInTrade, Message, Report, Rating
-from .forms import MyUserRegistrationForm, MyLoginForm, BookUploadForm
+from .forms import MyUserRegistrationForm, MyLoginForm, BookUploadForm, startTradeForm
 from django.contrib.auth import login, authenticate, logout
 from django.shortcuts import redirect
 from django.shortcuts import render, redirect, get_object_or_404
@@ -15,14 +15,37 @@ def profile_view(request, user_id):
     If the logged-in user is viewing their own profile, show upload link.
     """
     if request.method == 'GET':
-        profile_user = get_object_or_404(User, id=user_id)
-        books = Book.objects.filter(owner=profile_user).order_by('-id')
-        is_owner = request.user.is_authenticated and request.user == profile_user
+        profile_user = get_object_or_404(User, id=user_id)  # person whose profile is shown
+        owned_books = Book.objects.filter(owner=profile_user, is_wishlist=False).order_by('-id')
+        wished_books = Book.objects.filter(owner=profile_user, is_wishlist=True).order_by('-id')
+        is_owner = True if request.user.is_authenticated and request.user == profile_user else False
+        
+        my_reviews = Rating.objects.filter(rated_id=user_id)  # Get all reviews made to the user
+        
+        total_rating =0
+        for i in range(len(my_reviews)):
+            total_rating = total_rating + my_reviews[i].rating
+        average_rating = total_rating / len(my_reviews) if my_reviews else 0  # Calculate average rating
+        
+        num_trades_completed = Trade.objects.filter(requester=user_id, responder_status='Completed', requester_status='Completed').count() + Trade.objects.filter(responder=user_id, responder_status='Completed', requester_status='Completed').count()
+        
+        date_joined = profile_user.date_joined.strftime("%d/%m/%Y")  # Format the date joined
+        last_login = profile_user.last_login.strftime("%d/%m/%Y at %H:%M:%S") if profile_user.last_login else "Never"
+        
         return render(request, 'core/profile.html', {
             'profile_user': profile_user,
-            'books': books,
+            'owned_books': owned_books,
+            'wished_books': wished_books,
             'is_owner': is_owner,
+            'my_reviews': my_reviews,
+            'average_rating': average_rating if my_reviews else 'No ratings yet',
+            'num_trades_completed': num_trades_completed,
+            'date_joined': date_joined,
+            'last_login': last_login,
         })
+
+
+
 
 @login_required(login_url='login')
 def upload_book_view(request):
@@ -108,66 +131,6 @@ def books_view(request):
         'search': search,
     })
 
-def profile_view(request, user_id):
-    if not request.user.is_authenticated:
-        return redirect('login')  # Redirect to login if not authenticated
-    
-    if request.method == 'GET':
-        
-        user = User.objects.get(id=user_id)  # Get the user's record using their ID 
-        books = Book.objects.filter(is_wishlist=False, owner = user_id)  # Get all books owned by the user
-        wishlist_books = Book.objects.filter(is_wishlist=True, owner = user_id)  # Get all wishlist books owned by the user
-        my_reviews = Rating.objects.filter(rated_id=user_id)  # Get all reviews made to the user
-        total_rating =0
-        for i in range(len(my_reviews)):
-            total_rating = total_rating + my_reviews[i].rating
-        average_rating = total_rating / len(my_reviews) if my_reviews else 0  # Calculate average rating
-        num_trades_completed = Trade.objects.filter(requester=user_id, responder_received=True, requester_received=True).count() + Trade.objects.filter(responder=user_id, responder_received=True, requester_received=True).count()  
-        
-        return render(request, 'core/profile.html', {
-            'user': user,
-            'books': books,
-            'wishlist_books': wishlist_books,
-            'my_reviews': my_reviews,
-            'average_rating': average_rating if my_reviews else 'No ratings yet',
-            'num_trades_completed': num_trades_completed,
-        })
-        
-    return HttpResponse(f"Profile page for user ID: {user_id}")
-
-
-#def upload_book_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')  # Redirect to login if not authenticated
-    
-    if request.method == 'POST':
-        book_name = request.POST.get('book_name')
-        author = request.POST.get('author')
-        genre = request.POST.get('genre')
-        description = request.POST.get('description')
-        condition = request.POST.get('condition')
-        is_wishlist = request.POST.get('is_wishlist')
-        owner = request.user
-        
-        # Handle image upload
-        image = request.FILES.get('image')
-
-        # Create a new book instance
-        book = Book(
-            owner=owner,  # Set the owner of the book to the currently logged-in user
-            book_name=book_name,
-            author=author,
-            genre=genre,
-            description=description,
-            condition=condition,
-            is_wishlist=is_wishlist,
-            image=image
-        )
-        book.save()  # Save the book to the database
-        
-        return redirect('books')  # Redirect to the books page after uploading
-    
-    return render(request, 'upload_book.html')  # Render the upload book form template
 
 def settings_view(request):
     if not request.user.is_authenticated:
@@ -196,19 +159,46 @@ def mytrades_view(request):
         'trades': trades,
     })
 
-def trade_view(request, trade_id):
+@login_required
+def start_trade_view(request, user_id):
+    if request.method != 'POST':
+        return redirect('profile', user_id=user_id)
+    requester = request.user
+    responder = get_object_or_404(User, id=user_id)
+    if requester == responder:
+        return redirect('profile', user_id=user_id)
+    # find existing trade or create new
+    trade = (Trade.objects.filter(requester=requester, responder=responder).first()
+             or Trade.objects.filter(requester=responder, responder=requester).first())
+    if not trade:
+        trade = Trade.objects.create(requester=requester, responder=responder)
+    # support AJAX: return JSON if XHR, otherwise redirect
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'trade_id': trade.id})
+    return redirect('trade', trade_id=trade.id)
     if not request.user.is_authenticated:
         return redirect('login')  # Redirect to login if not authenticated
-    trade = Trade.objects.get(id=trade_id)
-    user = request.user
-    other_user = trade.responder if trade.requester == user else trade.requester
-    books_in_trade = BooksInTrade.objects.filter(trade=trade).select_related('book')
+    
+    requester = request.user
+    responder = get_object_or_404(User, id=user_id)
+    
+    # Create a new trade
+    trade = Trade.objects.create(requester=requester, responder=responder)
+    
+    return redirect('trade', trade_id=trade.id)
+
+@login_required(login_url='login')
+def trade_view(request, trade_id):
+    if request.method == 'GET':
+        trade = Trade.objects.get(id=trade_id)
+        user_1 = request.user
+        user_2 = trade.responder if trade.requester == user_1 else trade.requester
+        books_in_trade = BooksInTrade.objects.filter(trade=trade).select_related('book')
 
     
-    return render(request, 'core/trade.html', {
-        'user': user,
-        'other_user': other_user,
-        'trade': trade,
-        'books_in_trade': books_in_trade,
-
+        return render(request, 'core/trade.html', {
+            'user_1': user_1,
+            'user_2': user_2,
+            'trade': trade,
+            'books_in_trade': books_in_trade,
     })

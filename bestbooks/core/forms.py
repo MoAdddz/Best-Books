@@ -79,7 +79,47 @@ class BookUploadForm(forms.ModelForm):
         fields = ['book_name','author','genre','description','image','condition','is_wishlist']
 
 class startTradeForm(forms.Form):
+    requester_book_1 = forms.ModelChoiceField(queryset=Book.objects.none(), label="Your Book 1", required=True)
+    requester_book_2 = forms.ModelChoiceField(queryset=Book.objects.none(), label="Your Book 2", required=False)
+    requester_book_3 = forms.ModelChoiceField(queryset=Book.objects.none(), label="Your Book 3", required=False)
+    requester_book_4 = forms.ModelChoiceField(queryset=Book.objects.none(), label="Your Book 4", required=False)
+    
+    responder_book_1 = forms.ModelChoiceField(queryset=Book.objects.none(), label="Their Book 1", required=True)
+    responder_book_2 = forms.ModelChoiceField(queryset=Book.objects.none(), label="Their Book 2", required=False)
+    responder_book_3 = forms.ModelChoiceField(queryset=Book.objects.none(), label="Their Book 3", required=False)
+    responder_book_4 = forms.ModelChoiceField(queryset=Book.objects.none(), label="Their Book 4", required=False)
+    
+    def __init__(self, requester, responder, *args, **kwargs):
+        # Standard call to the parent class initialiser.
+        # This sets up the basic Form machinery.
+        super().__init__(*args, **kwargs) # the *args and **kwargs are just in case you want to pass extra stuff
 
-    class Meta:
-        model = Trade
-        fields = ['requester','responder']
+        # Fetch all books owned by the requester.
+        # Assumes there is an owner field on Book that points to a User.
+        requester_books = Book.objects.filter(owner=requester, is_wishlist=False)
+        requester_books = requester_books.exclude(available_for_trade=False)
+
+        # Fetch all books owned by the responder.
+        responder_books = Book.objects.filter(owner=responder, is_wishlist=False)
+        responder_books = responder_books.exclude(available_for_trade=False)
+
+        # Assign the requester's books to their four selector fields.
+        # The user will only be able to choose from their own books.
+        for field in [
+            "requester_book_1",
+            "requester_book_2",
+            "requester_book_3",
+            "requester_book_4"
+        ]:
+            self.fields[field].queryset = requester_books
+
+        # Assign the responder's books to their four selector fields.
+        # The user will only be able to choose books owned by the responder.
+        for field in [
+            "responder_book_1",
+            "responder_book_2",
+            "responder_book_3",
+            "responder_book_4"
+        ]:
+            self.fields[field].queryset = responder_books
+    

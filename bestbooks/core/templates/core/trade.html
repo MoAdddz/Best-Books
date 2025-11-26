@@ -1,33 +1,81 @@
+{% extends 'core/layout.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <a href="{% url 'home' %}" id="go_home_id">Home</a>
-    <h1>Trade Details</h1>
-    <p><strong>Trade ID:</strong> {{ trade.id }}</p>
-    <p><strong>Book:</strong> {{ trade.book.title }}</p>
-    <p><strong>From:</strong> {{ trade.from_user.username }}</p>
-    <p><strong>To:</strong> {{ trade.to_user.username }}</p>
-    <p><strong>Status:</strong> {{ trade.status }}</p>
-    <p><strong>Requester Received:</strong> {{ trade.requester_recieved }}</p>
-    <p><strong>Responder Received:</strong> {{ trade.responder_recieved }}</p>
+{% block title %}Trade between you and {{ user_2.username }}{% endblock %}
 
-    {% if request.user == trade.from_user and not trade.requester_recieved %}
-        <form method="post" action="{% url 'confirm_receipt' trade.id %}">
+{% block content %}
+    <h1>Trade between you and {{ user_2.username }}</h1>
+    {% if not user_1_accepted %}
+        <form method="post" action="{% url 'trade' trade.id %}">
             {% csrf_token %}
-            <button type="submit">Confirm Receipt</button>
+            <!-- Add any trade-related actions here, e.g., finalize trade, add messages, etc. -->
+            <button type="submit">Accept Trade</button>
         </form>
-    {% elif request.user == trade.to_user and not trade.responder_recieved %}
-        <form method="post" action="{% url 'confirm_receipt' trade.id %}">
-            {% csrf_token %}
-            <button type="submit">Confirm Receipt</button>
-        </form>
+    {% else %}
+        <h2>You have already accepted.</h2>
     {% endif %}
-</body>
-</html>
+
+    {% if both_accepted %}
+        <h2>Both parties have accepted the trade!</h2>
+        <h3>{{ user_2.username }}'s Address:</h3>
+        <p>
+            Address Line: {{ user_2_address_line }}<br>
+            Town: {{ user_2_town }}<br>
+            Country: {{ user_2_country }}<br>
+            Postcode: {{ user_2_postcode }}
+        </p>
+    {% else %}
+        <h2>Waiting for both parties to accept the trade.</h2>
+    {% endif %}
+    <h2>Your Books</h2>
+    <div class="book-list">
+        {% for book in user_1_books %}
+            <div class="book-card">
+                {% if book.image %}
+                    <img src="{{ book.image.url }}" alt="{{ book.book_name }}">
+                {% else %}
+                    <img src="{% static 'img/default_book.jpg' %}" alt="No image">
+                {% endif %}
+                <h3>{{ book.book_name }}</h3>
+                <p><strong>Author:</strong> {{ book.author }}</p>
+                <p><strong>Genre:</strong> {{ book.genre }}</p> <!-- transitive dependancy right below -->
+                <p><strong>Owner:</strong> <a href="{% url 'profile' user_1.id %}">{{ book.owner.username }}</a></p>
+                <p><strong>Condition:</strong> {{ book.condition }}</p>
+                {% if is_owner %}
+                    <form action="{% url 'delete_book' book.id %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this book?')">Delete Book</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p style="color:#fff;">No books found.</p>
+        {% endfor %}
+    </div>
+
+    <h2>Books from {{ user_2.username }}</h2>
+    <div class="book-list">
+        {% for book in user_2_books %}
+            <div class="book-card">
+                {% if book.image %}
+                    <img src="{{ book.image.url }}" alt="{{ book.book_name }}">
+                {% else %}
+                    <img src="{% static 'img/default_book.jpg' %}" alt="No image">
+                {% endif %}
+                <h3>{{ book.book_name }}</h3>
+                <p><strong>Author:</strong> {{ book.author }}</p>
+                <p><strong>Genre:</strong> {{ book.genre }}</p> <!-- transitive dependancy right below -->
+                <p><strong>Owner:</strong> <a href="{% url 'profile' user_2.id %}">{{ book.owner.username }}</a></p>
+                <p><strong>Condition:</strong> {{ book.condition }}</p>
+                {% if is_owner %}
+                    <form action="{% url 'delete_book' book.id %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this book?')">Delete Book</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p style="color:#fff;">No books found.</p>
+        {% endfor %}
+    </div>
+    
+{% endblock %}

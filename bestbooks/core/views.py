@@ -17,6 +17,7 @@ def profile_view(request, user_id):
     if request.method == 'GET':
         profile_user = get_object_or_404(User, id=user_id)  # person whose profile is shown
         owned_books = Book.objects.filter(owner=profile_user, is_wishlist=False).order_by('-id')
+        owned_books = owned_books.exclude(available_for_trade=False).order_by('-id')
         wished_books = Book.objects.filter(owner=profile_user, is_wishlist=True).order_by('-id')
         is_owner = True if request.user.is_authenticated and request.user == profile_user else False
         
@@ -117,13 +118,14 @@ def books_view(request):
     selected_genre = request.GET.get('genre', 'All')
     search = request.GET.get('search', '')
 
-    # 
     books = Book.objects.exclude(owner_id=request.user.id)
     if selected_genre != 'All':
         books = books.filter(genre=selected_genre)
     if search:
         books = books.filter(book_name__icontains=search)
-
+    books = books.filter(is_wishlist=False)
+    books = books.exclude(available_for_trade=False)
+    books = books.order_by('-id')  # Order by most recently added
     return render(request, 'core/books.html', {
         'books': books,
         'genres': genres,
@@ -131,6 +133,21 @@ def books_view(request):
         'search': search,
     })
 
+def delete_book_view(request, book_id):
+    if not request.user.is_authenticated:
+        return redirect('login')  # Redirect to login if not authenticated
+    
+    book = get_object_or_404(Book, id=book_id)
+    
+    # Ensure that only the owner can delete the book
+    if book.owner != request.user:
+        return redirect('profile', user_id=request.user.id)
+    
+    if request.method == 'POST':
+        book.delete()
+        return redirect('profile', user_id=request.user.id)  # Redirect to the user's profile after deletion
+    
+    return render(request, 'core/confirm_delete.html', {'book': book})  # Render a confirmation page
 
 def settings_view(request):
     if not request.user.is_authenticated:
@@ -160,45 +177,128 @@ def mytrades_view(request):
     })
 
 @login_required
-def start_trade_view(request, user_id):
+def start_trade_view(request, responder_user_id):
+    if request.method == 'POST':
+        requester = request.user
+        
+        if Book.objects.filter(owner=requester, is_wishlist = False).count() == 0:
+            return redirect('profile', user_id=responder_user_id)
+        
+        responder = get_object_or_404(User, id=responder_user_id)
+
+        if requester == responder:
+            return redirect('profile', user_id=responder_user_id)
+
+        trade = Trade.objects.create(requester=requester, responder=responder)
+        trade.requester_status = 'Accepted'
+        requester_book_1 = request.POST.get('requester_book_1')
+        requester_book_2 = request.POST.get('requester_book_2')
+        requester_book_3 = request.POST.get('requester_book_3')
+        requester_book_4 = request.POST.get('requester_book_4')
+
+        for book_id in [requester_book_1, requester_book_2, requester_book_3, requester_book_4]:
+            if book_id:
+                book = get_object_or_404(Book, id=book_id)
+                BooksInTrade.objects.create(trade=trade, book=book)
+
+        responder_book_1 = request.POST.get('responder_book_1')
+        responder_book_2 = request.POST.get('responder_book_2')
+        responder_book_3 = request.POST.get('responder_book_3')
+        responder_book_4 = request.POST.get('responder_book_4')
+
+        for book_id in [responder_book_1, responder_book_2, responder_book_3, responder_book_4]:
+            if book_id:
+                book = get_object_or_404(Book, id=book_id)
+                BooksInTrade.objects.create(trade=trade, book=book)
+
+        return redirect('trade', trade_id=trade.id)
+
+    if request.method == 'GET':
+        form = startTradeForm(requester=request.user, responder=get_object_or_404(User, id=responder_user_id))
+        responder = get_object_or_404(User, id=responder_user_id)
+        return render(request, 'core/start_trade.html', {
+            'form': form,
+            'responder': responder,
+        })
+
+    """
     if request.method != 'POST':
         return redirect('profile', user_id=user_id)
+
     requester = request.user
+    
+    if Book.objects.filter(owner=requester, is_wishlist = False).count() == 0:
+        return redirect('profile', user_id=user_id)
+    
     responder = get_object_or_404(User, id=user_id)
+
     if requester == responder:
         return redirect('profile', user_id=user_id)
     # find existing trade or create new
-    trade = (Trade.objects.filter(requester=requester, responder=responder).first()
-             or Trade.objects.filter(requester=responder, responder=requester).first())
-    if not trade:
-        trade = Trade.objects.create(requester=requester, responder=responder)
-    # support AJAX: return JSON if XHR, otherwise redirect
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({'trade_id': trade.id})
-    return redirect('trade', trade_id=trade.id)
-    if not request.user.is_authenticated:
-        return redirect('login')  # Redirect to login if not authenticated
-    
-    requester = request.user
-    responder = get_object_or_404(User, id=user_id)
-    
-    # Create a new trade
+    #trade = (Trade.objects.filter(requester=requester, responder=responder).first()
+     #        or Trade.objects.filter(requester=responder, responder=requester).first())
+    #if not trade:
     trade = Trade.objects.create(requester=requester, responder=responder)
-    
+
     return redirect('trade', trade_id=trade.id)
+    """
+    
 
 @login_required(login_url='login')
 def trade_view(request, trade_id):
-    if request.method == 'GET':
+    if request.method == 'GET' or request.method == 'POST':
         trade = Trade.objects.get(id=trade_id)
         user_1 = request.user
         user_2 = trade.responder if trade.requester == user_1 else trade.requester
-        books_in_trade = BooksInTrade.objects.filter(trade=trade).select_related('book')
+        books_in_trade = BooksInTrade.objects.filter(trade=trade).select_related('book') # .select_related to fetch related Book objects in one query
 
-    
+        if (trade.requester == user_1 and trade.requester_status == 'Accepted') or (trade.responder == user_1 and trade.responder_status == 'Accepted'):
+            user_1_accepted = True
+        else:
+            user_1_accepted = False
+        
+
+        # Retrieve books owned by user_1
+        user_1_books = [trade_book.book for trade_book in books_in_trade if trade_book.book.owner == user_1]
+        
+        # Retrieve books owned by user_2
+        user_2_books = [trade_book.book for trade_book in books_in_trade if trade_book.book.owner == user_2]
+
+        user_2_address_line = ''
+        user_2_town = ''
+        user_2_country = ''
+        user_2_postcode = ''
+        both_accepted = False
+        if trade.requester_status == 'Accepted' and trade.responder_status == 'Accepted':
+            both_accepted = True
+            user_2_address_line = user_2.address_line if user_2.address_line else ''
+            user_2_town = user_2.town if user_2.town else ''
+            user_2_country = user_2.country if user_2.country else ''
+            user_2_postcode = user_2.postcode if user_2.postcode else ''
+        
+        if request.method == 'POST':
+            if user_1 == trade.requester:
+                trade.requester_status = 'Accepted'
+            else:
+                trade.responder_status = 'Accepted'
+            trade.save()
+            for trade_book in books_in_trade:
+                trade_book.book.available_for_trade = False
+                trade_book.book.save()
+
+
+            return redirect('trade', trade_id=trade.id)
+
         return render(request, 'core/trade.html', {
             'user_1': user_1,
             'user_2': user_2,
             'trade': trade,
-            'books_in_trade': books_in_trade,
-    })
+            'user_1_books': user_1_books,
+            'user_2_books': user_2_books,
+            'user_1_accepted': user_1_accepted,
+            'both_accepted': both_accepted,
+            'user_2_address_line': user_2_address_line,
+            'user_2_town': user_2_town,
+            'user_2_country': user_2_country,
+            'user_2_postcode': user_2_postcode,
+        })

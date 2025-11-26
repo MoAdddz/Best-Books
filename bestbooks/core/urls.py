@@ -18,5 +18,6 @@ urlpatterns = [
     path('core/trade/<int:trade_id>/', views.trade_view, name='trade'),  #specific trade details
     path('core/layout/', views.layout_view, name='layout'),  # Layout template view
     path('core/upload_book', views.upload_book_view, name='upload_book'), # Example for uploading a book
-    path('start_trade/<int:user_id>/', views.start_trade_view, name='start_trade'),
+    path('start_trade/<int:responder_user_id>/', views.start_trade_view, name='start_trade'),
+    path('core/delete_book/<int:book_id>/', views.delete_book_view, name='delete_book'),  # Delete book URL
 ]

@@ -4,7 +4,10 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator, MinLengthValidator
 
 class User(AbstractUser):
-    address = models.TextField(blank=True)
+    address_line = models.TextField(blank=True)
+    town = models.CharField(max_length=100, blank=True)
+    country = models.CharField(max_length=100, blank=True)
+    postcode = models.CharField(max_length=20, blank=True)
     is_banned = models.BooleanField(default=False)
     def __str__(self):
         return self.username # This will return the username when the User object is printed
@@ -40,6 +43,7 @@ class Book(models.Model):
     image = models.ImageField(upload_to='book_images/', blank=True, null=True)
     condition = models.CharField(max_length=50, choices=CONDITION_CHOICES)
     is_wishlist = models.BooleanField(default=False)
+    available_for_trade = models.BooleanField(default=True)
     # No need to add 'id' or 'book_id' unless you want a custom name
 
     def __str__(self):
@@ -57,7 +61,7 @@ class Trade(models.Model):
     
     requester = models.ForeignKey(User, related_name='requested_trades', on_delete=models.CASCADE) #Cascade delete means if the user is deleted, their trades are also deleted
     responder = models.ForeignKey(User, related_name='received_trades', on_delete=models.CASCADE)
-    requester_status = models.CharField(max_length=20, choices=Trade_Status_Choices, default='Pending')
+    requester_status = models.CharField(max_length=20, choices=Trade_Status_Choices, default='Accepted')
     responder_status = models.CharField(max_length=20, choices=Trade_Status_Choices, default='Pending')
 
     created_at = models.DateTimeField(auto_now_add=True)

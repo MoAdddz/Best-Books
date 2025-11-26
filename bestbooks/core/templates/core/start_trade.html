@@ -1,0 +1,14 @@
+{% extends 'core/layout.html' %}
+{% load static %}
+{% block title %}Start your Trade{% endblock %}
+
+{% block content %}
+    <h1>Starting Trade with {{ responder.username }}</h1>
+    <form method="post" action="{% url 'start_trade' responder.id %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Upload</button>
+    </form>
+
+
+{% endblock %}

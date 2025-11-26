@@ -6,12 +6,7 @@
     {% if is_owner %}
         <a href="{% url 'upload_book' %}">Upload a book</a>
     {% endif %}
-    {% if not is_owner %}
-        <form action="{% url 'start_trade' user_id=profile_user.id %}" method="post" style="display:inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary">Start Trade</button>
-        </form>
-    {% endif %}
+
     <h1>{{ profile_user.username }}'s Profile</h1>
     <p><strong>Date Joined:</strong> {{ date_joined }}</p>
     <p><strong>Last Login:</strong> {{ last_login }}</p>
@@ -33,6 +28,12 @@
                 <p><strong>Genre:</strong> {{ book.genre }}</p> <!-- transitive dependancy right below -->
                 <p><strong>Owner:</strong> <a href="{% url 'profile' book.owner_id %}">{{ book.owner.username }}</a></p>
                 <p><strong>Condition:</strong> {{ book.condition }}</p>
+                {% if is_owner %}
+                    <form action="{% url 'delete_book' book.id %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this book?')">Delete Book</button>
+                    </form>
+                {% endif %}
             </div>
         {% empty %}
             <p style="color:#fff;">No books found.</p>
@@ -53,9 +54,23 @@
                 <p><strong>Genre:</strong> {{ book.genre }}</p> <!-- transitive dependancy right below -->
                 <p><strong>Owner:</strong> <a href="{% url 'profile' book.owner_id %}">{{ book.owner.username }}</a></p>
                 <p><strong>Condition:</strong> {{ book.condition }}</p>
+                {% if is_owner %}
+                    <form action="{% url 'delete_book' book.id %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this book?')">Delete Book</button>
+                    </form>
+                {% endif %}
             </div>
         {% empty %}
             <p style="color:#fff;">No books found.</p>
         {% endfor %}
+    </div>
+    <div>
+        {% if not is_owner %}
+        <form action="{% url 'start_trade' profile_user.id %}" method="get" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">Start Trade</button>
+        </form>
+    {% endif %}
     </div>
 {% endblock %}
